@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghseal"
+version = "0.1.0"
+description = "Share .env files by sealing them to your teammates' GitHub SSH keys. Commit the ciphertext, run with secrets injected, keep plaintext away from AI coding agents. age-compatible."
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{name = "Mohammad Hamarsheh"}]
+requires-python = ">=3.10"
+dependencies = ["pyrage>=1.2", "cryptography>=42", "bcrypt>=4"]
+keywords = ["dotenv", "env", "secrets", "age", "ssh", "github", "encryption", "ai-agents", "cursor", "claude-code"]
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security :: Cryptography",
+  "Topic :: Software Development",
+]
+
+[project.urls]
+Homepage = "https://github.com/hamarshehmhmd/ghseal"
+Issues = "https://github.com/hamarshehmhmd/ghseal/issues"
+
+[project.scripts]
+ghseal = "ghseal.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

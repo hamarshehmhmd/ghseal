@@ -1,0 +1,67 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        include:
+          - os: macos-latest
+            python: "3.13"
+          - os: windows-latest
+            python: "3.13"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install age CLI (interop tests)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age && age --version
+      - run: python -m pip install . pytest
+      - run: python -m pytest -q -rs
+        env:
+          GHSEAL_LIVE: "1"
+
+  end-to-end:
+    name: seal in one job, open in CI with an age key
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/checkout@v5
+      - run: python -m pip install .
+      - name: team seals a .env to a GitHub user + a CI age key
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir app && cd app && git init -q
+          printf 'STRIPE_SECRET_KEY=sk_test_123\nDEBUG=false\n' > .env
+          ghseal init
+          ghseal keygen -o "$RUNNER_TEMP/ci.key" > pub.txt
+          ghseal add @hamarshehmhmd
+          ghseal add "$(head -1 pub.txt)" --name ci
+          ghseal seal
+          ghseal check --strict
+          rm .env
+          export GHSEAL_AGE_KEY="$(grep AGE-SECRET "$RUNNER_TEMP/ci.key")"
+          test "$(ghseal run -- sh -c 'echo $STRIPE_SECRET_KEY')" = sk_test_123
+          test ! -e .env
+          sudo apt-get update -qq && sudo apt-get install -y -qq age
+          age -d -i "$RUNNER_TEMP/ci.key" .env.sealed | grep -q DEBUG=false
+          echo "end-to-end ok"
+
+  install-script:
+    name: one-line install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: GHSEAL_REF=${{ github.sha }} sh install.sh
+      - run: |
+          export PATH="$HOME/.local/bin:${PIPX_BIN_DIR:-/opt/pipx_bin}:$PATH"
+          ghseal --version
