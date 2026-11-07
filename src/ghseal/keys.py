@@ -154,7 +154,10 @@ def _load_ssh(data: bytes, path: str):
     if pw is None:
         if not sys.stdin.isatty():
             raise KeyError_(f"{path} is passphrase-protected: set GHSEAL_PASSPHRASE or run in a terminal")
-        pw = getpass.getpass(f"passphrase for {path}: ")
+        try:
+            pw = getpass.getpass(f"passphrase for {path}: ")
+        except (EOFError, KeyboardInterrupt):
+            raise KeyError_(f"{path} is passphrase-protected: set GHSEAL_PASSPHRASE or run in a terminal") from None
     try:
         key = ser.load_ssh_private_key(data, password=pw.encode())
     except ValueError:
